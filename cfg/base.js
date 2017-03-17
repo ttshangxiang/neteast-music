@@ -30,7 +30,7 @@ module.exports = {
     stats: { colors: true },
     proxy: {
       '/api': {
-          target: 'http://localhost:3000',
+          target: 'http://ttshangxiang.com:3000/',
           secure: false
       }
     }
