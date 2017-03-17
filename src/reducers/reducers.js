@@ -1,42 +1,21 @@
 import { combineReducers } from 'redux';
+import store_music from '../stores/music';
 
-const words = (state = { list: [] }, action) => {
-    const { type, list } = action;
+const music = (state = store_music, action) => {
+    let {type, ...payload} = action;
     switch (type) {
-        case 'words_load':
-            return { list: list };
-        default:
-            return state;
-    }
-}
-
-const home = (state = 999, action) => {
-    const { type } = action;
-    switch (type) {
-        case 'home_add':
-            return state + 1;
-        default:
-            return state;
-    }
-}
-
-const music = (state = { list: [], playing: null, autoplay: false, loading: false }, action) => {
-    const { type, list, index, loading } = action;
-    switch (type) {
-        case 'musics_load':
-            return Object.assign({},state,{list: list, playing: 0});
-        case 'musics_play':
-            return Object.assign({},state,{playing: index, autoplay: true, loading: true });
-        case 'musics_loading':
-            return Object.assign({},state,{loading: loading });
+        case 'set_state':
+            return Object.assign({},state, payload);
+        case 'select_item':
+            return Object.assign({},state, payload, {
+                current: state.playlist[payload.current_index]
+            });
         default:
             return state;
     }
 }
 
 const Reducer = combineReducers({
-    words,
-    home,
     music
 })
 

@@ -1,64 +1,55 @@
 
 import '../styles/Neteast.css'
 import React from 'react';
-import Playlist from './Playlist';
-import Player from './Player2';
 
 import 'core-js/fn/object/assign';
 import 'isomorphic-fetch';
 import promise from 'es6-promise';
 promise.polyfill();
+import { bindActionCreators } from 'redux';
+import { connect } from 'react-redux';
+import music_action from '../actions/music';
+
+const mapStateToProps = (state) => {
+    return state.music;
+}
+
+function mapDispatchToProps(dispatch) {
+    return bindActionCreators(music_action, dispatch);
+}
 
 class Neteast extends React.Component {
 
     constructor(props) {
         super(props);
-        this.state = {
-            type: 'playlist_module',
-            list: [],
-            select_id: null
-        }
+        this.state = {};
     }
 
     componentDidMount() {
-        let id = '109717983';
-        let arr = window.location.href.split('id=');
-        if (arr[1]&&arr[1].length>0) {
-            id = arr[1];
-        }
-        fetch('/api/neteast/playlist/'+id)
-        .then(response => response.json())
-        .then(json => {
-            if (json && json.playlist && json.playlist.tracks) {
-                this.setState({
-                    list: json.playlist.tracks
-                });
-            }
+        let audio = document.getElementById('audio');
+        let {set_state} = this.props;
+        audio.addEventListener('canplay', () => {
+            audio.play();
         });
-    }
-
-    selectItem(index) {
-        this.setState({
-            select_id: index
+        audio.addEventListener('pause', () => {
+            set_state({state: 2});
         });
-        this.setState({
-            type: 'player_module'
+        audio.addEventListener('play', () => {
+            set_state({state: 1});
         });
-    }
-
-    goto(type) {
-        this.setState({
-            type: type
+        audio.addEventListener('playing', () => {
+            set_state({loading: false});
+        });
+        audio.addEventListener('waiting', () => {
+            set_state({loading: true});
         });
     }
 
     render() {
-        let { type, list, select_id} = this.state;
         return (
-            <div className={'neteast ' + type}>
-                <Playlist list={list} select_id={select_id} selectItem={(index) =>this.selectItem(index)}></Playlist>
-                <Player list={list} select_id={select_id}  selectItem={(index) =>this.selectItem(index)} goto={(type) => this.goto(type)}></Player>
-                <audio id="audio" preload="none"></audio>
+            <div className={'neteast'}>
+                {this.props.children}
+                <audio id="audio" preload="none" ref="audio"></audio>
             </div>
         );
     }
@@ -67,4 +58,7 @@ class Neteast extends React.Component {
 Neteast.defaultProps = {
 };
 
-export default Neteast;
+export default connect(
+    mapStateToProps,
+    mapDispatchToProps
+)(Neteast);

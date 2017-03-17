@@ -1,12 +1,22 @@
 
 import React from 'react';
+import { bindActionCreators } from 'redux';
+import { connect } from 'react-redux';
+import music_action from '../actions/music';
+
+const mapStateToProps = (state) => {
+    return state.music;
+}
+
+function mapDispatchToProps(dispatch) {
+    return bindActionCreators(music_action, dispatch);
+}
 
 class Player extends React.Component {
 
     constructor(props) {
         super(props);
         this.state = {
-            status: 1,
             loop: 1,
             preload: 'none', //不自动加载
 
@@ -14,13 +24,10 @@ class Player extends React.Component {
             timeright: '',
             played: 0, //进度条
             loaded: 0, //已加载
-            loading: true,
 
-            select_id: null,
             pic_url: '',
             pic_url_blur: '',
 
-            lyric: [],
             lyric_index: 0,
             centerPage: 'show-cd'
         };
@@ -29,26 +36,25 @@ class Player extends React.Component {
     componentDidMount() {
         this.audio = document.getElementById('audio');
         this.checkStatus();
+        let id = this.props.params.id;
+        let { current } = this.props;
+        if (!current) {
+            this.props.getSongDetail(id);
+        }
+        if (id && id != this.props.last_id) {
+            this.props.getUrl(id);
+            this.props.getLyric(id);
+        }
     }
 
-    componentWillReceiveProps(nextProps) {
-        let {list, select_id} = nextProps;
-        if (this.state.select_id == select_id) {
-            return;
+    getImg() {
+        let {current} = this.props;
+        if (current && current.al) {
+            let pic_url = current.al.picUrl+'?param=320y320',
+                pic_url_blur = 'url("http://music.163.com/api/img/blur/'+current.al.pic+'")';
+            return { pic_url, pic_url_blur };
         }
-        let newState = {
-            select_id: select_id,
-            loading: true,
-            status: 1
-        };
-        if (list && list[select_id] && list[select_id].al && list[select_id].al) {
-            let pic_url = list[select_id].al.picUrl+'?param=320y320',
-                pic_url_blur = 'url("http://music.163.com/api/img/blur/'+list[select_id].al.pic+'")';
-            newState.pic_url = pic_url;
-            newState.pic_url_blur = pic_url_blur;
-        }
-        this.setState(newState);
-        this.getUrl(select_id);
+        return {pic_url: '', pic_url_blur: ''};
     }
 
     //秒钟变分钟
@@ -59,38 +65,37 @@ class Player extends React.Component {
     //事件
     checkStatus() {
         let audio = this.audio;
-        audio.addEventListener('canplay', () => {
-            audio.play();
-        });
-        audio.addEventListener('pause', () => {
-            this.setState({ status: 2 });
-        });
-        audio.addEventListener('play', () => {
-            this.setState({ status: 1 });
-        });
-        audio.addEventListener('playing', () => {
-            this.setState({ loading: false });
-        });
-        audio.addEventListener('waiting', () => {
-            this.setState({ loading: true });
-        });
-        audio.addEventListener('ended', () => {
+        this.endFunc = () => {
             this.change('next');
-        });
+        };
+        audio.addEventListener('ended', this.endFunc);
         let reg = /\d+\:\d{2}\.\d+/;
         let lyric_dom = document.getElementById('lyric-page');
         //进度条
-        setInterval( () => {
+        let { lyric } = this.props;
+        let time = this._timeF(this.audio.currentTime);
+        if (lyric) { //歌词初始位置
+            let start_index = 0;
+            for(let i = 0; i< lyric.length; i++) {
+                if (lyric[i] && (!reg.test(lyric[i][0]) || time > lyric[i][0])) {
+                    start_index++;
+                } else {
+                    break;
+                }
+            }
+            this.setState({lyric_index: start_index});
+        }
+        this.timer = setInterval( () => {
             if (audio.duration && audio.currentTime) {
-                let time = this._timeF(this.audio.currentTime);
+                time = this._timeF(this.audio.currentTime);
                 let obj = {
                     timeright: this._timeF(audio.duration),
                     timeleft: time,
                     played: audio.currentTime / audio.duration * 100 + '%',
                     loaded: audio.buffered.end(0) / audio.duration * 100 + '%'
                 }
-
-                let { lyric, lyric_index } = this.state;
+                let { lyric } = this.props;
+                let { lyric_index } = this.state;
                 let dom = document.querySelector('#lyric-page .item.active');
                 if (lyric[lyric_index] && (!reg.test(lyric[lyric_index][0]) || time > lyric[lyric_index][0])) {
                     dom && (lyric_dom.style.transform = 'translateY('+-1*(dom.offsetTop+dom.clientHeight)+'px)');
@@ -113,8 +118,14 @@ class Player extends React.Component {
         }, 500);
     }
 
+    componentWillUnmount() {
+        clearInterval(this.timer);
+        this.audio.removeEventListener('ended', this.endFunc);
+    }
+
     renderProgress() {
-        let {timeleft, timeright, loaded, played, loading} = this.state;
+        let {timeleft, timeright, loaded, played} = this.state;
+        let {loading} = this.props;
         return (
             <div className="player-progress">
                 <div className="time left">{timeleft}</div>
@@ -130,108 +141,55 @@ class Player extends React.Component {
     }
 
     backToList () {
-        this.props.goto('playlist_module');
+        this.context.router.goBack();
     }
 
     //播放
     play() {
-        if (this.state.status > 1) {
+        if (this.props.status > 1) {
             this.audio.play();
-            this.setState({ status: 1 });
-        } else if (this.state.status == 1) {
+            this.props.set_state({status:1});
+        } else if (this.props.status == 1) {
             this.audio.pause();
-            this.setState({ status: 2 });
+            this.props.set_state({status:2});
         }
     }
 
-    //切歌
+    //切换歌曲
     change(action) {
-        let { select_id } = this.state;
-        let { list } = this.props;
+        let { playlist, current_index, loop, set_state, getUrl, getLyric } = this.props;
         let next_index = null;
         if (action == 'next') {
-            if (this.state.loop == 3) {
-                next_index = Math.floor( Math.random() * list.length );
+            if (loop == 3) {
+                next_index = Math.floor( Math.random() * playlist.length );
             } else {
-                next_index = select_id + 1;
-                if (next_index >= list.length) {
+                next_index = current_index + 1;
+                if (next_index >= playlist.length) {
                     next_index = 0;
                 }
             }
         } else if (action == 'prev') {
-            next_index = select_id - 1;
+            next_index = current_index - 1;
             if (next_index < 0) {
-                next_index = list.length - 1;
+                next_index = playlist.length - 1;
             }
         }
-        this.props.selectItem(next_index);
-    }
-
-    //获取歌曲播放url
-    getUrl(index) {
-        let select_item = this.props.list[index];
-        if (!select_item) return;
-        fetch('/api/neteast/url/'+select_item.id)
-        .then(response => response.json())
-        .then(json => {
-            if (json.data&&json.data&&json.data[0]) {
-                this.audio.autoplay = 'autoplay';
-                this.audio.src = json.data[0].url;
-            }
+        let new_id = playlist[next_index].id;
+        this.context.router.replace('/player/'+new_id);
+        set_state({
+            current_index: next_index,
+            current: playlist[next_index],
+            lyric: []
         });
-        this.getLyric(index);
-    }
-
-    //获取歌词
-    getLyric(index) {
-        let select_item = this.props.list[index];
-        if (!select_item) return;
-        fetch('/api/neteast/lyric/'+select_item.id)
-        .then(response => response.json())
-        .then(json => {
-            //歌词，翻译，歌词作者，翻译作者，纯音乐，暂无歌词
-            let { lrc, tlyric, lyricUser, transUser, nolyric, uncollected } = json;
-            let obj = {}; //结果
-            if (nolyric) { //纯音乐 请欣赏
-                obj =  {'纯音乐 请欣赏': {lyric: '纯音乐 请欣赏'}};
-            }
-            if (uncollected) {
-                obj =  {'暂无歌词': {lyric: '暂无歌词'}};
-            }
-            if (lrc && lrc.lyric) { //歌词
-                let reg = /\[.*\].*/g,
-                    arr = lrc.lyric.match(reg);
-                arr.forEach((item) => {
-                    let result = item.match(/\[(.*)\](.*)/);
-                    obj[result[1]] = {
-                        time: result[1],
-                        lyric: result[2] || ''
-                    }
-                });
-            }
-            if (tlyric && tlyric.lyric) { //歌词
-                let reg = /\[.*\].*/g,
-                    arr = tlyric.lyric.match(reg);
-                arr.forEach((item) => {
-                    let result = item.match(/\[(.*)\](.*)/);
-                    obj[result[1]] && (obj[result[1]].tlyric = result[2] || '');
-                });
-            }
-            if (lyricUser && lyricUser.nickname) {
-                obj['歌词贡献者'] = {lyric: lyricUser.nickname };
-            }
-            if (transUser && transUser.nickname) {
-                obj['翻译贡献者'] = {lyric: transUser.nickname };
-            }
-            this.setState({
-                lyric: Object.entries(obj),
-                lyric_index: 0
-            });
-        })
+        getUrl(new_id);
+        getLyric(new_id);
+        this.setState({lyric_index: 0});
     }
 
     renderLyric () {
-        let { lyric, lyric_index } = this.state;
+        let { lyric } = this.props;
+        if (!lyric) return;
+        let { lyric_index } = this.state;
         let dom = [];
         lyric.forEach((item, index) => {
             let [key, value] = item;
@@ -258,16 +216,23 @@ class Player extends React.Component {
         }
     }
 
+    //跳转到评论
+    showComment() {
+        let { current } = this.props;
+        if (!current) return;
+        this.context.router.push('/comment/'+current.id);
+    }
+
     render() {
-        let { list } = this.props;
-        let { select_id, pic_url, pic_url_blur } = this.state;
+        let { current } = this.props;
+        let { pic_url, pic_url_blur } = this.getImg();
         let select_item = {al:{},ar:[{}]};
-        if (select_id !== null) {
-            select_item = list[select_id];
+        if (current !== null) {
+            select_item = current;
         }
         let progress_dom = this.renderProgress();
         let lrc_dom = this.renderLyric();
-        let centerCls = this.state.status==1?' play ':'';
+        let centerCls = this.props.status==1?' play ':'';
             centerCls += this.state.centerPage;
         return (
             <div className="player-page">
@@ -299,7 +264,7 @@ class Player extends React.Component {
                         <div className="wrap">
                             <div className="item love"></div>
                             <div className="item download"></div>
-                            <div className="item comment small">999+</div>
+                            <div className="item comment small" onClick={() => this.showComment()}>999+</div>
                             <div className="item more"></div>
                         </div>
                     </div>
@@ -309,7 +274,7 @@ class Player extends React.Component {
                         <div className="list"></div>
                         <div className="wrap">
                             <div className="prev" onClick={() => this.change('prev')}></div>
-                            <div className={'play ' + (this.state.status==1?'':'pause')} onClick={() => this.play()}></div>
+                            <div className={'play ' + (this.props.status==1?'':'pause')} onClick={() => this.play()}></div>
                             <div className="next" onClick={() => this.change('next')}></div>
                         </div>
                     </div>
@@ -322,4 +287,11 @@ class Player extends React.Component {
 Player.defaultProps = {
 };
 
-export default Player;
+Player.contextTypes = {
+    router: React.PropTypes.object
+};
+
+export default connect(
+    mapStateToProps,
+    mapDispatchToProps
+)(Player);
