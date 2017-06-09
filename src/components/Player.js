@@ -3,6 +3,7 @@ import React from 'react';
 import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
 import music_action from '../actions/music';
+import propTypes from 'prop-types';
 
 const mapStateToProps = (state) => {
     return state.music;
@@ -288,7 +289,7 @@ Player.defaultProps = {
 };
 
 Player.contextTypes = {
-    router: React.PropTypes.object
+    router: propTypes.object
 };
 
 export default connect(

@@ -15,7 +15,8 @@ const action = {
                     dispatch({
                         type: 'set_state',
                         playlist: json.playlist.tracks,
-                        playlist_id: id
+                        playlist_id: id,
+                        playlist_info: json.playlist
                     });
                 }
             })

@@ -4,6 +4,7 @@ import '../styles/Comment.css';
 import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
 import music_action from '../actions/music';
+import propTypes from 'prop-types';
 
 const mapStateToProps = (state) => {
     return state.music;
@@ -151,7 +152,7 @@ Comment.defaultProps = {
 };
 
 Comment.contextTypes = {
-    router: React.PropTypes.object
+    router: propTypes.object
 };
 
 export default connect(
