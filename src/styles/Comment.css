@@ -128,3 +128,121 @@
     text-align: center;
     color: #666;
 }
+
+.playlist-header {
+    height: 200px;
+    position: relative;
+    color: #fff;
+}
+
+.pl-avatar {
+    width: 100px;
+    height: 100px;
+    position: absolute;
+    left: 36px;
+    top: 48px;
+    background-color: rgb(204, 204, 204);
+}
+
+.pl-mask {
+    background-color: rgba(42, 35, 30, 0.701961);
+    height: 100%;
+    width: 100%;
+    position: absolute;
+    top: 0px;
+}
+
+.pl-content {
+    height: 100%;
+    width: 100%;
+    position: absolute;
+    top: 0px;
+}
+
+.pl-title {
+    font-size: 14px;
+    padding: 12px;
+}
+
+.pl-content-text {
+    position: absolute;
+    left: 150px;
+    top: 58px;
+}
+
+.pl-user {
+    padding-top: 12px;
+}
+
+.pl-user > * {
+    vertical-align: middle;
+}
+
+.pl-user img {
+    border-radius: 50%;
+    height: 24px;
+    width: 24px;
+    vertical-align: middle;
+    margin-right: 6px;
+}
+
+.pl-item {
+    padding: 6px 40px 6px 44px;
+    position: relative;
+}
+
+.pl-line {
+    margin: -1px 0px 0px 44px;
+    height: 1px;
+    border: none;
+    background-color: rgb(224, 224, 224)
+}
+
+.ellipsis {
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.pl-item-name {
+    color: rgba(0, 0, 0, 0.870588);
+}
+
+.pl-item-info {
+    font-size: 9px;
+    line-height: 16px;
+    height: 16px;
+    margin: 4px 0px 0px;
+    color: rgba(0, 0, 0, 0.541176);
+}
+
+.pl-item-index {
+    height: 24px;
+    width: 36px;
+    display: block;
+    position: absolute;
+    top: 16px;
+    margin: 0px;
+    left: 4px;
+    text-align: center;
+}
+
+.pl-play-icon {
+    height: 24px;
+    width: 24px;
+    display: block;
+    position: absolute;
+    top: 0px;
+    margin: 8px 6px 0px;
+    left: 4px;
+    background-image: url(../images/play_all.svg);
+    background-repeat: no-repeat;
+    background-position: center center;
+}
+
+.pl-item.play-all {
+    margin-left: 0px;
+    padding: 12px 40px 12px 44px;
+    position: relative;
+    border-bottom: 1px solid rgb(224, 224, 224);
+}
